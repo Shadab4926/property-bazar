@@ -6,17 +6,14 @@
   <title>Property Bazar</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React & ReactDOM CDN -->
+  <!-- React, ReactDOM, and Babel CDNs -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel CDN to compile JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Firebase Core, Auth, and Firestore CDN -->
-  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
-  <!-- Inter Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -25,1092 +22,175 @@
 </head>
 <body class="bg-gray-100 antialiased">
   <noscript>You need to enable JavaScript to run this app.</noscript>
-
   <div id="root"></div>
 
-  <!-- Your React App Code -->
+  <!-- Yeh script tag humara React application chalayega.
+       'text/babel' type Babel ko batata hai ki is code ko process karna hai.
+  -->
   <script type="text/babel">
-    // Global variables provided by the environment
-    const __app_id = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const __firebase_config = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-      // Dummy config for local testing if not in the environment
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-    const __initial_auth_token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-    // Destructure Firebase services from the global 'firebase' object
-    // This is the correct way to access them when using CDN scripts
-    const { initializeApp } = firebase.app;
-    const { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } = firebase.auth;
-    const { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, query, where, getDocs, serverTimestamp } = firebase.firestore;
-    
     const { useState, useEffect } = React;
+    const { createRoot } = ReactDOM;
 
-    // --- Icon Components (Lucide React equivalent via SVG) ---
-    const HouseIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-building text-blue-500">
-        <rect width="16" height="16" x="4" y="2" rx="2" ry="2" />
-        <path d="M12 2v14" />
-        <path d="M12 14h6" />
-        <path d="M12 10h6" />
-        <path d="M12 6h6" />
-        <path d="M18 6v14" />
-        <path d="M18 10v10" />
-        <path d="M18 14v6" />
-        <path d="M18 18v2" />
-        <path d="M4 6v14" />
-        <path d="M4 10v10" />
-        <path d="M4 14v6" />
-        <path d="M4 18v2" />
-      </svg>
-    );
-
-    const UserIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-2 text-white">
-        <circle cx="12" cy="7" r="4" />
-        <path d="M18.8 19.8a9 9 0 0 0-13.6 0" />
-      </svg>
-    );
-
-    const HeartIcon = ({ filled = false }) => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart text-red-500">
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-      </svg>
-    );
-
-    const StarIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="gold" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-      </svg>
-    );
-
-    const PremiumIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none" className="lucide lucide-diamond text-purple-600">
-        <path d="M2.7 10.7a2.41 2.41 0 0 1 0-3.4L6.9 3.5A2.41 2.41 0 0 1 10.3 3.5L13.5 6.7a2.41 2.41 0 0 1 0 3.4L10.3 14.3a2.41 2.41 0 0 1-3.4 0Z"/><path d="M7.6 10.8a2.41 2.41 0 0 0-3.4 0L.5 14.5a2.41 2.41 0 0 0 0 3.4l4.2 4.2a2.41 2.41 0 0 0 3.4 0l3.7-3.7a2.41 2.41 0 0 0 0-3.4Z"/><path d="M10.8 13.5a2.41 2.41 0 0 0-3.4 0L3.5 17.7a2.41 2.41 0 0 0 0 3.4l4.2 4.2a2.41 2.41 0 0 0 3.4 0l3.7-3.7a2.41 2.41 0 0 0 0-3.4Z"/><path d="M13.5 10.7a2.41 2.41 0 0 1 0 3.4L17.7 17.7a2.41 2.41 0 0 1 0 3.4l4.2 4.2a2.41 2.41 0 0 1 0-3.4L17.7 14.3a2.41 2.41 0 0 1-3.4 0Z"/>
-      </svg>
-    );
-
-    const ArrowLeftIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left mr-2"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-    );
-
-    const AdminIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-gauge text-white">
-        <path d="m12 15-3.5-3.5L8 10l-2.5-2.5a.5.5 0 0 0-.8.4V20a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.1a.5.5 0 0 0-.8-.4L16 10l-.5.5L12 15Z"/><path d="m16 10-2.5 2.5a.5.5 0 0 0 .4.8H19a2 2 0 0 0 2-2V8.1a.5.5 0 0 0-.8-.4L16 10Z"/><path d="M12 15h0"/><path d="M12 15l-3.5-3.5"/><path d="M12 15l2.5-2.5"/>
-      </svg>
-    );
-
-    const EyeIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye text-gray-500">
-        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
-      </svg>
-    );
-
-    const EyeOffIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye-off text-gray-500">
-        <path d="M10.5 12.5A5 5 0 0 1 12 12c.5 0 .97.09 1.4.24M14 14l-2 2" /><path d="M2.37 3.37A10 10 0 0 0 2 12c0 7 10 7 10 7s7-3 10-7c-.57-1.12-1.35-2.14-2.27-3M16.48 10.48 21 12" /><path d="m9 9 6 6" />
-      </svg>
-    );
-
-    const EditIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-    );
-
-    const TrashIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-    );
-
-    // --- Data and Constants ---
-    const CATEGORIES = [
-      { id: 1, name: 'Residential', subTypes: ['Apartment', 'House', 'Villa', 'Studio Flat'] },
-      { id: 2, name: 'Commercial', subTypes: ['Office Space', 'Shop', 'Warehouse'] },
-      { id: 3, name: 'Land', subTypes: ['Residential Plot', 'Commercial Plot', 'Agricultural Land'] }
+    // Dummy data for properties to show in the listings
+    const properties = [
+      {
+        id: 1,
+        title: "Modern Apartment in City Center",
+        description: "A beautiful 2BHK apartment with all modern amenities.",
+        price: "₹ 50,000 / month",
+        image: "https://placehold.co/600x400/38bdf8/ffffff?text=Apartment+1",
+        location: "Kolkata, West Bengal",
+        type: "Rent"
+      },
+      {
+        id: 2,
+        title: "Spacious Family Villa",
+        description: "Luxurious 4BHK villa with a large garden and swimming pool.",
+        price: "₹ 2.5 Crore",
+        image: "https://placehold.co/600x400/22c55e/ffffff?text=Villa+2",
+        location: "Mumbai, Maharashtra",
+        type: "Sale"
+      },
+      {
+        id: 3,
+        title: "Commercial Office Space",
+        description: "Prime office location in a bustling commercial area.",
+        price: "₹ 75,000 / month",
+        image: "https://placehold.co/600x400/f59e0b/ffffff?text=Office+3",
+        location: "Bengaluru, Karnataka",
+        type: "Commercial"
+      }
     ];
 
-    const REVIEWS = [
-      { text: "Property Bazar helped me find my dream home in just two weeks! The listings are genuine and the interface is so easy to use. Highly recommended!", author: "Priya Sharma" },
-      { text: "As a broker, this platform has revolutionized my business. I can connect with serious buyers instantly. The premium listing feature is a game-changer.", author: "Rahul Verma" },
-      { text: "Found a great rental apartment without any hassle. The filters are very helpful and the property details are accurate.", author: "Neha Gupta" }
-    ];
-
-    const FAQS = [
-      { question: "How do I post a property listing?", answer: "Navigate to the 'Post Property' page from the main menu, fill out the form with your property details, and submit. Your listing will be reviewed by an admin for approval." },
-      { question: "Is it free to list a property?", answer: "Yes, standard listings are completely free. You can also opt for a premium listing for a small fee to gain more visibility." },
-      { question: "How do I contact a property owner?", answer: "On the property details page, you will find a 'Contact Seller' button which will give you the contact information of the person who posted the listing." },
-      { question: "What is a featured listing?", answer: "Featured listings are highlighted on the homepage and at the top of the listings page, giving them maximum exposure." }
-    ];
-
-    // --- Reusable UI Components ---
-    const ListingCard = ({ property, isFeatured = false, onClick }) => (
-      <div onClick={onClick} className="cursor-pointer bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
-        <div className="relative">
-          <img
-            src={property.image}
-            alt={property.title}
-            className="w-full h-48 object-cover"
-            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x300/e5e7eb/6b7280?text=Image+Not+Found'; }}
-          />
-          {isFeatured && (
-            <span className="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md">
-              Featured
-            </span>
-          )}
-          {property.isPremium && (
-            <span className="absolute top-2 left-2 bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md flex items-center">
-              <PremiumIcon /> Premium
-            </span>
-          )}
-          {property.isSoldOut && (
-            <span className="absolute bottom-2 left-2 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md">
-              Sold Out
-            </span>
-          )}
-          <div className="absolute bottom-2 right-2 bg-gray-900 bg-opacity-60 text-white text-xs font-semibold px-2 py-1 rounded-full">
-            {property.price}
-          </div>
-        </div>
-        <div className="p-4">
-          <h3 className="text-xl font-bold text-gray-800 truncate mb-1">{property.title}</h3>
-          <p className="text-sm text-gray-500 mb-2">{property.location}</p>
-          <div className="flex justify-between items-center mt-4">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full transition-colors duration-300">
-              View Details
-            </button>
-            <button aria-label="Add to favorites" className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-300">
-              <HeartIcon />
-            </button>
-          </div>
-        </div>
+    // Home Page Component
+    const HomePage = () => (
+      <div className="text-center py-20 bg-white shadow-lg rounded-lg">
+        <h1 className="text-4xl font-bold text-gray-800 mb-4">Welcome to Property Bazar</h1>
+        <p className="text-lg text-gray-600 mb-8">Find your dream home with us. Explore the best properties for sale and rent.</p>
+        <button className="bg-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-md hover:bg-blue-700 transition-colors duration-300">
+          Explore Listings
+        </button>
       </div>
     );
 
-    const Modal = ({ children, onClose, title }) => (
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
-        <div className="relative bg-white p-8 rounded-lg shadow-xl max-w-lg w-full m-4">
-          <h2 className="text-2xl font-bold mb-4">{title}</h2>
-          {children}
-          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x-circle"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 15 6-6"/></svg>
-          </button>
-        </div>
-      </div>
-    );
-
-    const PostPropertyModal = ({ onClose, userId, db, isAuthReady, updateProperties }) => {
-      const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        location: '',
-        type: 'Residential',
-        subType: 'Apartment',
-        price: '',
-        image: '',
-        isPremium: false,
-        isFeatured: false,
-        isApproved: false,
-        isSoldOut: false
-      });
-
-      const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
-
-      const handleInputChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-          ...prev,
-          [name]: type === 'checkbox' ? checked : value
-        }));
-      };
-
-      const handleCategoryChange = (e) => {
-        const categoryName = e.target.value;
-        const category = CATEGORIES.find(c => c.name === categoryName);
-        setSelectedCategory(category);
-        setFormData(prev => ({
-          ...prev,
-          type: categoryName,
-          subType: category ? category.subTypes[0] : ''
-        }));
-      };
-
-      const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!isAuthReady || !userId) {
-          console.error("Authentication not ready. Cannot post property.");
-          return;
-        }
-
-        try {
-          // Public collection for everyone to see
-          const publicCollection = collection(db, `artifacts/${__app_id}/public/data/properties`);
-          const newDocRef = await addDoc(publicCollection, {
-            ...formData,
-            userId: userId,
-            timestamp: serverTimestamp()
-          });
-
-          // Private collection for the user's dashboard
-          const privateCollection = collection(db, `artifacts/${__app_id}/users/${userId}/properties`);
-          await setDoc(doc(privateCollection, newDocRef.id), {
-            ...formData,
-            id: newDocRef.id,
-            timestamp: serverTimestamp()
-          });
-          
-          updateProperties();
-          onClose();
-        } catch (error) {
-          console.error("Error adding document: ", error);
-        }
-      };
-
-      return (
-        <Modal onClose={onClose} title="Post Your Property">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Title</label>
-              <input type="text" name="title" value={formData.title} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea name="description" value={formData.description} onChange={handleInputChange} rows="3" className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required></textarea>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Location</label>
-              <input type="text" name="location" value={formData.location} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Price</label>
-              <input type="text" name="price" value={formData.price} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Image URL</label>
-              <input type="url" name="image" value={formData.image} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Property Type</label>
-              <select name="type" value={formData.type} onChange={handleCategoryChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                {CATEGORIES.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
-              </select>
-            </div>
-            {selectedCategory && selectedCategory.subTypes && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Property Sub-type</label>
-                <select name="subType" value={formData.subType} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                  {selectedCategory.subTypes.map(subType => <option key={subType} value={subType}>{subType}</option>)}
-                </select>
+    // Listings Page Component
+    const ListingsPage = () => (
+      <div className="py-8">
+        <h2 className="text-3xl font-bold text-gray-800 mb-6">Our Latest Listings</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {properties.map(property => (
+            <div key={property.id} className="bg-white rounded-lg shadow-lg overflow-hidden transition-transform transform hover:scale-105">
+              <img src={property.image} alt={property.title} className="w-full h-48 object-cover"/>
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">{property.title}</h3>
+                <p className="text-blue-600 font-bold text-lg mb-2">{property.price}</p>
+                <p className="text-gray-600 text-sm mb-4">{property.description}</p>
+                <div className="flex items-center text-gray-500 text-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  <span>{property.location}</span>
+                </div>
               </div>
-            )}
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center text-sm font-medium text-gray-700">
-                <input type="checkbox" name="isPremium" checked={formData.isPremium} onChange={handleInputChange} className="rounded text-blue-600 focus:ring-blue-500" />
-                <span className="ml-2">Premium Listing</span>
-              </label>
             </div>
-            <div className="flex justify-end">
-              <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-300">
-                Post Property
-              </button>
-            </div>
-          </form>
-        </Modal>
-      );
-    };
+          ))}
+        </div>
+      </div>
+    );
 
-    const EditPropertyModal = ({ property, onClose, db, updateProperties }) => {
-      const [formData, setFormData] = useState({
-        ...property,
-        isFeatured: property.isFeatured || false,
-        isApproved: property.isApproved || false,
-        isSoldOut: property.isSoldOut || false
-      });
+    // About Us Page Component
+    const AboutPage = () => (
+      <div className="py-12 bg-white shadow-lg rounded-lg px-8">
+        <h2 className="text-3xl font-bold text-gray-800 mb-4">About Us</h2>
+        <p className="text-gray-600 leading-relaxed">
+          Property Bazar is a leading platform connecting buyers, sellers, and renters. We strive to provide a seamless and transparent experience for all your real estate needs. Our mission is to make finding your perfect property as easy as possible.
+        </p>
+      </div>
+    );
 
-      const handleInputChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-          ...prev,
-          [name]: type === 'checkbox' ? checked : value
-        }));
-      };
-
-      const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-          const publicDocRef = doc(db, `artifacts/${__app_id}/public/data/properties`, property.id);
-          await updateDoc(publicDocRef, { ...formData });
-
-          const privateDocRef = doc(db, `artifacts/${__app_id}/users/${property.userId}/properties`, property.id);
-          await updateDoc(privateDocRef, { ...formData });
-
-          updateProperties();
-          onClose();
-        } catch (error) {
-          console.error("Error updating document: ", error);
-        }
-      };
-
-      return (
-        <Modal onClose={onClose} title="Edit Property">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Title</label>
-              <input type="text" name="title" value={formData.title} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea name="description" value={formData.description} onChange={handleInputChange} rows="3" className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required></textarea>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Price</label>
-              <input type="text" name="price" value={formData.price} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Image URL</label>
-              <input type="url" name="image" value={formData.image} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
-            </div>
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center text-sm font-medium text-gray-700">
-                <input type="checkbox" name="isPremium" checked={formData.isPremium} onChange={handleInputChange} className="rounded text-blue-600 focus:ring-blue-500" />
-                <span className="ml-2">Premium Listing</span>
-              </label>
-              <label className="flex items-center text-sm font-medium text-gray-700">
-                <input type="checkbox" name="isFeatured" checked={formData.isFeatured} onChange={handleInputChange} className="rounded text-blue-600 focus:ring-blue-500" />
-                <span className="ml-2">Featured Listing</span>
-              </label>
-              <label className="flex items-center text-sm font-medium text-gray-700">
-                <input type="checkbox" name="isApproved" checked={formData.isApproved} onChange={handleInputChange} className="rounded text-blue-600 focus:ring-blue-500" />
-                <span className="ml-2">Approved</span>
-              </label>
-              <label className="flex items-center text-sm font-medium text-gray-700">
-                <input type="checkbox" name="isSoldOut" checked={formData.isSoldOut} onChange={handleInputChange} className="rounded text-blue-600 focus:ring-blue-500" />
-                <span className="ml-2">Sold Out</span>
-              </label>
-            </div>
-            <div className="flex justify-end">
-              <button type="submit" className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition-colors duration-300">
-                Save Changes
-              </button>
-            </div>
-          </form>
-        </Modal>
-      );
-    };
-
-    const LoginModal = ({ onClose, onLogin, onSwitchToRegister }) => {
-      const [email, setEmail] = useState('');
-      const [password, setPassword] = useState('');
-      const [showPassword, setShowPassword] = useState(false);
-      const [error, setError] = useState('');
-
-      const handleLogin = async (e) => {
-        e.preventDefault();
-        setError('');
-        try {
-          const auth = getAuth(firebaseApp);
-          await signInWithEmailAndPassword(auth, email, password);
-          onLogin();
-        } catch (err) {
-          console.error("Login failed:", err);
-          setError(err.message);
-        }
-      };
-
-      return (
-        <Modal onClose={onClose} title="Login">
-          <form onSubmit={handleLogin} className="space-y-4">
-            {error && <div className="text-red-500 text-sm">{error}</div>}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 top-6 pr-3 flex items-center text-sm leading-5"
-              >
-                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-              </button>
-            </div>
-            <div className="flex justify-between items-center">
-              <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-300">
-                Login
-              </button>
-              <button type="button" onClick={onSwitchToRegister} className="text-blue-600 hover:underline">
-                New User? Register
-              </button>
-            </div>
-          </form>
-        </Modal>
-      );
-    };
-
-    const RegisterModal = ({ onClose, onSwitchToLogin }) => {
-      const [email, setEmail] = useState('');
-      const [password, setPassword] = useState('');
-      const [showPassword, setShowPassword] = useState(false);
-      const [error, setError] = useState('');
-
-      const handleRegister = async (e) => {
-        e.preventDefault();
-        setError('');
-        try {
-          const auth = getAuth(firebaseApp);
-          await createUserWithEmailAndPassword(auth, email, password);
-          onClose();
-        } catch (err) {
-          console.error("Registration failed:", err);
-          setError(err.message);
-        }
-      };
-
-      return (
-        <Modal onClose={onClose} title="Register">
-          <form onSubmit={handleRegister} className="space-y-4">
-            {error && <div className="text-red-500 text-sm">{error}</div>}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
-            </div>
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 top-6 pr-3 flex items-center text-sm leading-5"
-              >
-                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-              </button>
-            </div>
-            <div className="flex justify-between items-center">
-              <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-300">
-                Register
-              </button>
-              <button type="button" onClick={onSwitchToLogin} className="text-blue-600 hover:underline">
-                Already have an account? Login
-              </button>
-            </div>
-          </form>
-        </Modal>
-      );
-    };
-
-    const HomePage = ({ allProperties, setActivePage, setSelectedProperty }) => {
-      const featuredProperties = allProperties.filter(p => p.isFeatured && p.isApproved && !p.isSoldOut).slice(0, 3);
-      return (
-        <div className="bg-gray-50 min-h-screen font-sans">
-          {/* Hero Section */}
-          <section className="bg-blue-600 text-white py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-            <div className="relative max-w-4xl mx-auto text-center">
-              <h1 className="text-5xl md:text-6xl font-extrabold mb-4 leading-tight">
-                Find Your Dream Property in India
-              </h1>
-              <p className="text-xl md:text-2xl font-light mb-8">
-                Explore homes, apartments, and commercial spaces for sale or rent.
-              </p>
-              {/* Search Bar */}
-              <div className="w-full bg-white rounded-full shadow-xl p-2 flex items-center space-x-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search text-gray-400 ml-4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <input
-                  type="text"
-                  placeholder="Search by location, city, or keyword..."
-                  className="w-full h-12 text-gray-800 bg-transparent outline-none focus:ring-0 placeholder:text-gray-400"
-                />
-                <button className="bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition-colors duration-300">
-                  Search
+    // Post Property Page Component
+    const PostPropertyPage = () => (
+        <div className="py-12 bg-white shadow-lg rounded-lg px-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Post a Property</h2>
+            <p className="text-gray-600 mb-6">Fill out the form below to list your property with us.</p>
+            <form className="space-y-6">
+                <div>
+                    <label htmlFor="title" className="block text-gray-700 font-medium mb-1">Property Title</label>
+                    <input type="text" id="title" className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" placeholder="e.g., Spacious 3BHK Villa"/>
+                </div>
+                <div>
+                    <label htmlFor="description" className="block text-gray-700 font-medium mb-1">Description</label>
+                    <textarea id="description" rows="4" className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" placeholder="Describe your property in detail..."></textarea>
+                </div>
+                <div>
+                    <label htmlFor="price" className="block text-gray-700 font-medium mb-1">Price</label>
+                    <input type="text" id="price" className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50" placeholder="e.g., ₹ 20,000 / month"/>
+                </div>
+                <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md shadow-md hover:bg-blue-700 transition-colors duration-300">
+                    Submit Listing
                 </button>
-              </div>
-            </div>
-          </section>
-
-          {/* Featured Properties Section */}
-          <section className="py-16 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-3xl font-bold text-gray-800 mb-8">Featured Properties <StarIcon /></h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {featuredProperties.length > 0 ? (
-                  featuredProperties.map(p => <ListingCard key={p.id} property={p} isFeatured={true} onClick={() => { setActivePage('details'); setSelectedProperty(p); }} />)
-                ) : (
-                  <p className="text-gray-600">No featured properties found at the moment.</p>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* Customer Reviews Section */}
-          <section className="bg-gray-100 py-16 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-              <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">What Our Customers Say</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {REVIEWS.map((review, index) => (
-                  <div key={index} className="bg-white p-6 rounded-xl shadow-md">
-                    <p className="italic text-gray-600 mb-4">"{review.text}"</p>
-                    <p className="font-semibold text-gray-800">- {review.author}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* FAQ Section */}
-          <section className="py-16 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">Frequently Asked Questions</h2>
-              <div className="space-y-6">
-                {FAQS.map((faq, index) => (
-                  <div key={index} className="bg-white p-6 rounded-xl shadow-md">
-                    <h3 className="font-bold text-gray-800 mb-2">{faq.question}</h3>
-                    <p className="text-gray-600">{faq.answer}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
+            </form>
         </div>
-      );
-    };
-
-    const ListingsPage = ({ allProperties, setActivePage, setSelectedProperty }) => {
-      const [filters, setFilters] = useState({ type: 'All', subType: 'All', keywords: '', location: '' });
-      const [filteredProperties, setFilteredProperties] = useState([]);
-      
-      useEffect(() => {
-        const newFilteredProperties = allProperties.filter(p => {
-          if (!p.isApproved || p.isSoldOut) {
-            return false;
-          }
-          if (filters.type !== 'All' && p.type !== filters.type) {
-            return false;
-          }
-          if (filters.subType !== 'All' && p.subType !== filters.subType) {
-            return false;
-          }
-          const keywordsMatch = filters.keywords.toLowerCase().split(' ').every(keyword =>
-            (p.title?.toLowerCase().includes(keyword) ||
-            p.description?.toLowerCase().includes(keyword))
-          );
-          const locationMatch = filters.location.toLowerCase().split(' ').every(keyword =>
-            (p.location?.toLowerCase().includes(keyword))
-          );
-          return keywordsMatch && locationMatch;
-        });
-        setFilteredProperties(newFilteredProperties);
-      }, [filters, allProperties]);
-
-      const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
-      };
-
-      const handleSearchChange = (e) => {
-        setFilters(prev => ({ ...prev, keywords: e.target.value }));
-      };
-
-      const handleLocationSearch = (e) => {
-        setFilters(prev => ({ ...prev, location: e.target.value }));
-      };
-      
-      const allSubTypes = [...new Set(allProperties.map(p => p.subType).filter(Boolean))];
-
-      return (
-        <div className="bg-gray-100 min-h-screen font-sans py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-4xl font-bold text-gray-800 mb-8">All Property Listings</h1>
-            
-            <div className="bg-white p-6 rounded-xl shadow-md mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <label htmlFor="search-bar" className="block text-sm font-medium text-gray-700">Search by Title/Description</label>
-                <input
-                  id="search-bar"
-                  type="text"
-                  name="keywords"
-                  value={filters.keywords}
-                  onChange={handleSearchChange}
-                  placeholder="e.g., modern flat, house for sale"
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label htmlFor="location-search" className="block text-sm font-medium text-gray-700">Search by Location</label>
-                <input
-                  id="location-search"
-                  type="text"
-                  name="location"
-                  value={filters.location}
-                  onChange={handleLocationSearch}
-                  placeholder="e.g., Delhi, Mumbai"
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700">Filter by Type</label>
-                <select id="type-filter" name="type" value={filters.type} onChange={handleFilterChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" >
-                  <option value="All">All Types</option>
-                  {CATEGORIES.map(cat => ( <option key={cat.id} value={cat.name}>{cat.name}</option> ))}
-                </select>
-              </div>
-              {filters.type === 'Residential' && (
-                <div>
-                  <label htmlFor="subtype-filter" className="block text-sm font-medium text-gray-700">Filter by Sub-type</label>
-                  <select id="subtype-filter" name="subType" value={filters.subType} onChange={handleFilterChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" >
-                    <option value="All">All Sub-types</option>
-                    {allSubTypes.map(subType => ( <option key={subType} value={subType}>{subType}</option> ))}
-                  </select>
-                </div>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredProperties.length > 0 ? (
-                filteredProperties.map(p => (
-                  <ListingCard key={p.id} property={p} onClick={() => { setActivePage('details'); setSelectedProperty(p); }} />
-                ))
-              ) : (
-                <div className="md:col-span-3 text-center text-gray-600 p-8"> No listings match your search criteria. </div>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    const PropertyDetails = ({ property, onBack }) => (
-      <div className="bg-gray-100 min-h-screen font-sans">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <button onClick={onBack} className="flex items-center text-blue-600 hover:text-blue-800 mb-8 transition-colors duration-300">
-            <ArrowLeftIcon /> Back to Listings
-          </button>
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <img src={property.image} alt={property.title} className="w-full h-96 object-cover" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/1200x800/e5e7eb/6b7280?text=Property+Image'; }} />
-            <div className="p-8 md:p-12">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h1 className="text-4xl font-bold text-gray-800 mb-2">{property.title}</h1>
-                  <p className="text-xl text-gray-600">{property.location}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-4xl font-extrabold text-indigo-600">{property.price}</span>
-                  {property.isPremium && <div className="flex items-center justify-end mt-1 text-purple-600"><PremiumIcon /> <span className="text-sm font-semibold ml-1">Premium Listing</span></div>}
-                  {property.isFeatured && <div className="flex items-center justify-end mt-1 text-yellow-500"><StarIcon /> <span className="text-sm font-semibold ml-1">Featured</span></div>}
-                </div>
-              </div>
-              <p className="text-gray-700 leading-relaxed mb-6">{property.description}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                <div className="bg-gray-50 p-4 rounded-md shadow-sm">
-                  <p className="text-sm text-gray-500">Property Type</p>
-                  <p className="font-semibold text-gray-800">{property.type}</p>
-                </div>
-                {property.subType && (
-                  <div className="bg-gray-50 p-4 rounded-md shadow-sm">
-                    <p className="text-sm text-gray-500">Sub-type</p>
-                    <p className="font-semibold text-gray-800">{property.subType}</p>
-                  </div>
-                )}
-                <div className="bg-gray-50 p-4 rounded-md shadow-sm">
-                  <p className="text-sm text-gray-500">Posted On</p>
-                  <p className="font-semibold text-gray-800">{property.timestamp ? new Date(property.timestamp.seconds * 1000).toLocaleDateString() : 'N/A'}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-center">
-                <a href={`tel:${property.contactNumber}`} className="bg-blue-600 text-white font-bold py-3 px-6 rounded-full hover:bg-blue-700 transition-colors duration-300">Contact Seller</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     );
 
-    const DashboardPage = ({ user, userProperties, setActivePage, setSelectedProperty, setEditingProperty, db, updateProperties }) => {
-      const handleDelete = async (propertyId) => {
-        // Use a custom UI for confirmation instead of 'window.confirm'
-        const confirmed = window.confirm("Are you sure you want to delete this property?");
-        if (confirmed) {
-          try {
-            // Delete from public collection
-            await deleteDoc(doc(db, `artifacts/${__app_id}/public/data/properties`, propertyId));
-            // Delete from private collection
-            await deleteDoc(doc(db, `artifacts/${__app_id}/users/${user.uid}/properties`, propertyId));
-            updateProperties();
-          } catch (error) {
-            console.error("Error deleting document: ", error);
-          }
-        }
-      };
-
-      const handleLogout = async () => {
-        const auth = getAuth();
-        await signOut(auth);
-        setActivePage('home');
-      };
-
-      return (
-        <div className="bg-gray-100 min-h-screen font-sans py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <h1 className="text-4xl font-bold text-gray-800">Your Dashboard</h1>
-              <button onClick={handleLogout} className="bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 transition-colors duration-300">
-                Logout
-              </button>
-            </div>
-            <p className="text-gray-600 mb-4">Welcome, {user.email} (User ID: {user.uid})</p>
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <h2 className="text-2xl font-bold mb-4">My Listings</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {userProperties.length > 0 ? (
-                  userProperties.map(p => (
-                    <div key={p.id} className="bg-gray-50 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 relative">
-                      <ListingCard property={p} onClick={() => { setActivePage('details'); setSelectedProperty(p); }} />
-                      <div className="absolute top-2 right-2 flex space-x-2 p-2 rounded-full">
-                        <button onClick={() => { setEditingProperty(p); }} className="bg-yellow-500 text-white p-2 rounded-full shadow-md hover:bg-yellow-600 transition-colors duration-300">
-                          <EditIcon />
-                        </button>
-                        <button onClick={() => handleDelete(p.id)} className="bg-red-500 text-white p-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-300">
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-600">You have not posted any properties yet.</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    const AdminPanel = ({ allProperties, db, updateProperties }) => {
-      const [editingProperty, setEditingProperty] = useState(null);
-
-      const handleDelete = async (propertyId, userId) => {
-        // Use a custom UI for confirmation instead of 'window.confirm'
-        const confirmed = window.confirm("Are you sure you want to delete this property from all listings?");
-        if (confirmed) {
-          try {
-            await deleteDoc(doc(db, `artifacts/${__app_id}/public/data/properties`, propertyId));
-            if (userId) {
-              await deleteDoc(doc(db, `artifacts/${__app_id}/users/${userId}/properties`, propertyId));
-            }
-            updateProperties();
-          } catch (error) {
-            console.error("Error deleting document: ", error);
-          }
-        }
-      };
-
-      return (
-        <div className="bg-gray-100 min-h-screen font-sans py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-4xl font-bold text-gray-800 mb-8">Admin Panel</h1>
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <h2 className="text-2xl font-bold mb-4">All Property Listings (Admin View)</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {allProperties.map((p) => (
-                      <tr key={p.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.title}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.location}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.price}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${p.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {p.isApproved ? 'Approved' : 'Pending'}
-                          </span>
-                          {p.isFeatured && <span className="inline-flex items-center px-2.5 py-0.5 ml-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Featured</span>}
-                          {p.isPremium && <span className="inline-flex items-center px-2.5 py-0.5 ml-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Premium</span>}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button onClick={() => setEditingProperty(p)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                          <button onClick={() => handleDelete(p.id, p.userId)} className="text-red-600 hover:text-red-900">Delete</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          {editingProperty && (
-            <EditPropertyModal
-              property={editingProperty}
-              onClose={() => setEditingProperty(null)}
-              db={db}
-              updateProperties={updateProperties}
-            />
-          )}
-        </div>
-      );
-    };
-    
     // Main App Component
     const App = () => {
       const [activePage, setActivePage] = useState('home');
-      const [user, setUser] = useState(null);
-      const [isAdmin, setIsAdmin] = useState(false);
-      const [properties, setProperties] = useState([]);
-      const [userProperties, setUserProperties] = useState([]);
-      const [selectedProperty, setSelectedProperty] = useState(null);
-      const [showPostModal, setShowPostModal] = useState(false);
-      const [showLoginModal, setShowLoginModal] = useState(false);
-      const [showRegisterModal, setShowRegisterModal] = useState(false);
-      const [isAuthReady, setIsAuthReady] = useState(false);
-      const [db, setDb] = useState(null);
-      const [auth, setAuth] = useState(null);
-      const [editingProperty, setEditingProperty] = useState(null);
 
-      // Initialize Firebase and auth state listener
-      useEffect(() => {
-        try {
-          const app = initializeApp(__firebase_config);
-          const dbInstance = getFirestore(app);
-          const authInstance = getAuth(app);
-          setDb(dbInstance);
-          setAuth(authInstance);
-
-          const unsubscribe = onAuthStateChanged(authInstance, async (currentUser) => {
-            setUser(currentUser);
-            setIsAdmin(currentUser && currentUser.email === 'admin@example.com');
-            if (currentUser) {
-              const userId = currentUser.uid;
-              const userRef = doc(dbInstance, `artifacts/${__app_id}/users`, userId);
-              try {
-                const userSnap = await getDoc(userRef);
-                if (!userSnap.exists()) {
-                  await setDoc(userRef, { email: currentUser.email, createdAt: serverTimestamp() });
-                }
-              } catch (error) {
-                console.error("Error fetching or creating user document:", error);
-              }
-            }
-            setIsAuthReady(true);
-          });
-          
-          return () => unsubscribe();
-        } catch (error) {
-          console.error("Firebase Initialization Error:", error);
-        }
-      }, []);
-
-      // Sign in with custom token or anonymously
-      useEffect(() => {
-        const handleAuth = async () => {
-          if (auth) {
-            try {
-              if (__initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-              } else {
-                await signInAnonymously(auth);
-              }
-            } catch (error) {
-              console.error("Firebase Auth Error:", error);
-            }
-          }
-        };
-        handleAuth();
-      }, [auth]);
-
-      // Fetch properties from Firestore
-      const fetchProperties = () => {
-        if (db && isAuthReady) {
-          const publicCollection = collection(db, `artifacts/${__app_id}/public/data/properties`);
-          const unsubscribePublic = onSnapshot(publicCollection, (snapshot) => {
-            const fetchedProperties = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setProperties(fetchedProperties);
-          });
-
-          if (user) {
-            const privateCollection = collection(db, `artifacts/${__app_id}/users/${user.uid}/properties`);
-            const unsubscribePrivate = onSnapshot(privateCollection, (snapshot) => {
-              const fetchedUserProperties = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              setUserProperties(fetchedUserProperties);
-            });
-            return () => {
-              unsubscribePublic();
-              unsubscribePrivate();
-            };
-          }
-
-          return () => unsubscribePublic();
-        }
-      };
-
-      useEffect(() => {
-        const cleanup = fetchProperties();
-        return () => {
-          if (cleanup) cleanup();
-        };
-      }, [db, isAuthReady, user]);
-
+      // Helper function to render pages based on activePage state
       const renderPage = () => {
         switch (activePage) {
           case 'home':
-            return <HomePage allProperties={properties} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} />;
+            return <HomePage />;
           case 'listings':
-            return <ListingsPage allProperties={properties} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} categories={CATEGORIES} />;
-          case 'details':
-            return <PropertyDetails property={selectedProperty} onBack={() => setActivePage('listings')} />;
-          case 'post':
-            if (!user) {
-              return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-                  <p className="text-xl text-gray-700">Please log in to post a property.</p>
-                  <button onClick={() => setActivePage('login')} className="mt-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700">
-                    Go to Login
-                  </button>
-                </div>
-              );
-            }
-            return (
-              <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-                <p className="text-xl text-gray-700">Click below to open the form:</p>
-                <button onClick={() => setShowPostModal(true)} className="mt-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700">
-                  Post a New Property
-                </button>
-              </div>
-            );
-          case 'login':
-            return (
-              <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-                <p className="text-xl text-gray-700">Click below to login:</p>
-                <button onClick={() => setShowLoginModal(true)} className="mt-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700">
-                  Open Login
-                </button>
-              </div>
-            );
-          case 'dashboard':
-            if (!user) {
-              return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-                  <p className="text-xl text-gray-700">Please log in to view your dashboard.</p>
-                  <button onClick={() => setActivePage('login')} className="mt-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700">
-                    Go to Login
-                  </button>
-                </div>
-              );
-            }
-            return <DashboardPage user={user} userProperties={userProperties} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} setEditingProperty={setEditingProperty} db={db} updateProperties={fetchProperties} />;
+            return <ListingsPage />;
           case 'about':
-            return (
-              <div className="bg-gray-100 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
-                  <h1 className="text-4xl font-bold text-gray-800 mb-8">About Us</h1>
-                  <div className="bg-white p-6 rounded-xl shadow-md">
-                    <p className="text-lg text-gray-700 leading-relaxed">
-                      Property Bazar is your trusted platform for buying, selling, and renting properties across India. Our mission is to simplify the real estate process by providing a user-friendly interface, genuine listings, and exceptional customer support. We are committed to helping you find your perfect home, office, or plot with ease and confidence.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          case 'admin':
-            if (!isAdmin) {
-              return (
-                <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-                  <p className="text-xl text-gray-700">Access Denied. You do not have administrator privileges.</p>
-                  <button onClick={() => setActivePage('home')} className="mt-4 bg-blue-600 text-white font-bold py-2 px-6 rounded-full hover:bg-blue-700">
-                    Go to Home
-                  </button>
-                </div>
-              );
-            }
-            return <AdminPanel allProperties={properties} db={db} updateProperties={fetchProperties} />;
+            return <AboutPage />;
+          case 'post':
+            return <PostPropertyPage />;
           default:
-            return <HomePage allProperties={properties} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} />;
+            return <HomePage />;
         }
       };
 
       return (
-        <div className="min-h-screen flex flex-col">
-          {/* Main Navigation */}
-          <nav className="bg-white shadow-md sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center h-16">
-                <div className="flex items-center">
-                  <a href="#" onClick={() => setActivePage('home')} className="flex-shrink-0 flex items-center space-x-2">
-                    <HouseIcon />
-                    <span className="text-2xl font-bold text-gray-800">PropertyBazar</span>
-                  </a>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <button onClick={() => setActivePage('home')} className="text-gray-600 hover:text-blue-600 transition-colors duration-300">Home</button>
-                  <button onClick={() => setActivePage('listings')} className="text-gray-600 hover:text-blue-600 transition-colors duration-300">Listings</button>
-                  <button onClick={() => setActivePage('about')} className="text-gray-600 hover:text-blue-600 transition-colors duration-300">About Us</button>
-                  <button onClick={() => setActivePage('post')} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-full hover:bg-blue-700 transition-colors duration-300">
-                    Post Property
-                  </button>
-                  {isAdmin && (
-                    <button onClick={() => setActivePage('admin')} className="bg-gray-800 text-white py-2 px-4 rounded-full hover:bg-gray-900 transition-colors duration-300 flex items-center space-x-2">
-                      <AdminIcon />
-                      <span>Admin Panel</span>
-                    </button>
-                  )}
-                  <button onClick={() => user ? setActivePage('dashboard') : setActivePage('login')} className="bg-gray-800 text-white py-2 px-4 rounded-full hover:bg-gray-900 transition-colors duration-300 flex items-center space-x-2">
-                    <UserIcon />
-                    <span>{user ? 'Dashboard' : 'Login'}</span>
-                  </button>
-                </div>
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center">
+          {/* Header/Navbar */}
+          <header className="w-full bg-white shadow-md rounded-b-lg">
+            <nav className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+              <h1 className="text-2xl font-bold text-blue-600">Property Bazar</h1>
+              <div className="flex flex-wrap justify-center space-x-2 sm:space-x-4">
+                <button onClick={() => setActivePage('home')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-300 p-2 rounded-md">Home</button>
+                <button onClick={() => setActivePage('listings')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-300 p-2 rounded-md">Listings</button>
+                <button onClick={() => setActivePage('about')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-300 p-2 rounded-md">About Us</button>
+                <button onClick={() => setActivePage('post')} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-full hover:bg-blue-700 transition-colors duration-300">
+                  Post Property
+                </button>
               </div>
-            </div>
-          </nav>
+            </nav>
+          </header>
 
-          {/* Page Content */}
-          <main className="flex-grow">
+          {/* Main content area */}
+          <main className="container mx-auto px-4 py-8 flex-grow">
             {renderPage()}
           </main>
-
-          {/* Modals */}
-          {showPostModal && (
-            <PostPropertyModal onClose={() => setShowPostModal(false)} userId={user.uid} db={db} isAuthReady={isAuthReady} updateProperties={fetchProperties} />
-          )}
-          {showLoginModal && (
-            <LoginModal onClose={() => setShowLoginModal(false)} onLogin={() => { setShowLoginModal(false); setActivePage('dashboard'); }} onSwitchToRegister={() => { setShowLoginModal(false); setShowRegisterModal(true); }} />
-          )}
-          {showRegisterModal && (
-            <RegisterModal onClose={() => setShowRegisterModal(false)} onSwitchToLogin={() => { setShowRegisterModal(false); setShowLoginModal(true); }} />
-          )}
-          {editingProperty && (
-            <EditPropertyModal
-              property={editingProperty}
-              onClose={() => setEditingProperty(null)}
-              db={db}
-              updateProperties={fetchProperties}
-            />
-          )}
-
+          
+          {/* Footer */}
+          <footer className="w-full bg-white shadow-inner rounded-t-lg mt-8">
+            <div className="container mx-auto px-4 py-6 text-center text-gray-500 text-sm">
+              &copy; {new Date().getFullYear()} Property Bazar. All rights reserved.
+            </div>
+          </footer>
         </div>
       );
     };
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
+    // Render the App component into the root div
+    const container = document.getElementById('root');
+    const root = createRoot(container);
     root.render(<App />);
+
   </script>
 </body>
 </html>
