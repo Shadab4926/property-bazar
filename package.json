@@ -1,28 +1,47 @@
 {
   "name": "property-bazar",
+  "version": "0.1.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
-  },
   "dependencies": {
-    "firebase": "^10.12.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@tailwindcss/forms": "^0.5.10",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "firebase": "^12.1.0",
+    "react": "^18.3.1",        <-- Recommended change: Downgrade to React 18 for compatibility with react-scripts 5
+    "react-dom": "^18.3.1",     <-- Recommended change: Downgrade to React 18 for compatibility with react-scripts 5
+    "react-icons": "^4.10.1",
+    "react-scripts": "^5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "devDependencies": {
-    "@remix-run/dev": "2.9.2",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react": "^7.34.2",
-    "eslint-plugin-react-hooks": "^4.6.2",
-    "eslint-plugin-react-refresh": "^0.4.7",
-    "vite": "^5.3.1"
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.4.39",       <-- Recommended change: Update postcss to latest v8 for better compatibility
+    "tailwindcss": "^3.4.6"     <-- Recommended change: Downgrade to a stable Tailwind CSS v3 release
   }
 }
