@@ -63,6 +63,14 @@ const AdminIcon = () => (
   </svg>
 );
 
+const Trash2Icon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+);
+
+const CheckIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M9 11l3 3L22 4"/></svg>
+);
+
 // --- Data and Constants ---
 const REVIEWS = [
   { text: "Property Bazar helped me find my dream home in just two weeks! The listings are genuine and the interface is so easy to use. Highly recommended!", author: "Priya Sharma" },
@@ -657,15 +665,15 @@ const SignUpPage = ({ setActivePage, auth }) => {
       setActivePage('dashboard');
     } catch (e) {
       setError(e.message);
-      console.error("Sign-up error:", e);
+      console.error("Sign up error:", e);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-sm">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-6">Create Account</h2>
-        <p className="text-center text-gray-600 mb-6">Create a new account to post listings and manage your profile.</p>
+        <h2 className="text-3xl font-bold text-gray-800 text-center mb-6">Sign Up</h2>
+        <p className="text-center text-gray-600 mb-6">Create a new account to post properties.</p>
         {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg mb-4">{error}</div>}
         <form onSubmit={handleSignUp} className="space-y-6">
           <div>
@@ -684,232 +692,330 @@ const SignUpPage = ({ setActivePage, auth }) => {
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300"
           >
-            Create Account
+            Sign Up
           </button>
         </form>
         <p className="mt-6 text-center text-gray-600 text-sm">
-          Already have an account? <button onClick={() => setActivePage('login')} className="text-blue-500 hover:text-blue-700 font-bold">Sign in</button>
+          Already have an account? <button onClick={() => setActivePage('login')} className="text-blue-500 hover:text-blue-700 font-bold">Login now</button>
         </p>
       </div>
     </div>
   );
 };
 
-const DashboardPage = ({ user, userListings, setActivePage, setSelectedProperty, db }) => {
+const DashboardPage = ({ user, myListings, db, setActivePage, setSelectedProperty }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [modalTitle, setModalTitle] = useState('');
 
-  const handleDelete = async (listingId) => {
+  const handleDeleteListing = async (listingId) => {
     try {
-      // Delete from user's private collection
       await deleteDoc(doc(db, `artifacts/${appId}/users/${user.uid}/listings`, listingId));
-      
-      // Also delete from public collection (if it exists)
-      const q = query(collection(db, `artifacts/${appId}/public/data/listings`), where("id", "==", listingId));
-      const querySnapshot = await getDocs(q);
-      querySnapshot.forEach(async (doc) => {
-        await deleteDoc(doc.ref);
-      });
-      
-      setModalMessage("Listing deleted successfully!");
+      setModalTitle("Success!");
+      setModalMessage("Listing deleted successfully from your dashboard.");
       setIsModalVisible(true);
     } catch (e) {
-      console.error("Error deleting document: ", e);
-      setModalMessage("Error deleting listing. Please try again.");
+      setModalTitle("Error!");
+      setModalMessage("Failed to delete listing. Please try again.");
       setIsModalVisible(true);
+      console.error("Error deleting document: ", e);
+    }
+  };
+
+  const handleToggleSoldOut = async (listingId, isSoldOut) => {
+    try {
+      await updateDoc(doc(db, `artifacts/${appId}/users/${user.uid}/listings`, listingId), {
+        isSoldOut: !isSoldOut
+      });
+      // Find the public document to update its sold-out status as well
+      const publicListingsRef = collection(db, `artifacts/${appId}/public/data/listings`);
+      const q = query(publicListingsRef, where("id", "==", listingId));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        querySnapshot.forEach(async (d) => {
+          await updateDoc(doc(db, `artifacts/${appId}/public/data/listings`, d.id), {
+            isSoldOut: !isSoldOut
+          });
+        });
+      }
+      setModalTitle("Success!");
+      setModalMessage("Listing status updated successfully.");
+      setIsModalVisible(true);
+    } catch (e) {
+      setModalTitle("Error!");
+      setModalMessage("Failed to update listing status. Please try again.");
+      setIsModalVisible(true);
+      console.error("Error updating document: ", e);
     }
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen font-sans py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">Welcome, {user.email}</h1>
-        <p className="text-gray-600 mb-8">This is your dashboard. You can manage your listings and profile here.</p>
-        <p className="text-sm font-mono text-gray-500 mb-8 break-words">User ID: {user.uid}</p>
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">My Listings</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {userListings.length > 0 ? (
-            userListings.map(p => (
-              <div key={p.id} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
-                <ListingCard property={p} onClick={() => { setActivePage('details'); setSelectedProperty(p); }} />
-                <div className="p-4 flex space-x-2">
-                  <button onClick={() => setActivePage('post')} className="flex-1 bg-blue-500 text-white font-bold py-2 px-4 rounded-full hover:bg-blue-600 transition-colors duration-300">
-                    Edit
-                  </button>
-                  <button onClick={() => handleDelete(p.id)} className="flex-1 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 transition-colors duration-300">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
+    <div className="min-h-screen bg-gray-100 p-4 font-sans">
+      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <h1 className="text-4xl font-bold text-gray-800 mb-8">My Dashboard</h1>
+        <p className="text-gray-600 mb-8">
+          Welcome back! Here you can manage your property listings. Your user ID is: <span className="font-mono bg-gray-200 px-2 py-1 rounded-md">{user.uid}</span>
+        </p>
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">My Listings</h2>
+          {myListings.length === 0 ? (
+            <div className="text-center py-12 text-gray-600">
+              <p className="mb-4">You have not posted any properties yet.</p>
+              <button onClick={() => setActivePage('post')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full">
+                Post Your First Property
+              </button>
+            </div>
           ) : (
-            <p className="text-gray-600">You have not posted any listings yet. <button onClick={() => setActivePage('post')} className="text-blue-600 font-bold">Post one now!</button></p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {myListings.map(p => (
+                <div key={p.id} className="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden">
+                  <div className="relative">
+                    <img
+                      src={p.image}
+                      alt={p.title}
+                      className="w-full h-48 object-cover"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x300/e5e7eb/6b7280?text=Listing+Image'; }}
+                    />
+                    {p.isApproved ? (
+                      <span className="absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md flex items-center">
+                        <CheckIcon /> Approved
+                      </span>
+                    ) : (
+                      <span className="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md">
+                        Pending
+                      </span>
+                    )}
+                    {p.isSoldOut && (
+                      <span className="absolute bottom-2 left-2 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md">
+                        Sold Out
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="text-xl font-bold text-gray-800 truncate mb-1">{p.title}</h3>
+                    <p className="text-sm text-gray-500 mb-2">{p.location}</p>
+                    <p className="text-lg font-semibold text-blue-600 mb-4">{p.price}</p>
+                    <div className="flex flex-col space-y-2 mt-4">
+                      <button onClick={() => handleToggleSoldOut(p.id, p.isSoldOut)} className={`py-2 px-4 rounded-full font-bold ${p.isSoldOut ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white`}>
+                        {p.isSoldOut ? 'Mark as Available' : 'Mark as Sold Out'}
+                      </button>
+                      <button onClick={() => handleDeleteListing(p.id)} className="flex items-center justify-center space-x-2 py-2 px-4 rounded-full font-bold bg-gray-200 hover:bg-gray-300 text-gray-800">
+                        <Trash2Icon />
+                        <span>Delete Listing</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
-      <Modal 
-        show={isModalVisible} 
-        title="Action Status" 
-        message={modalMessage} 
-        onClose={() => setIsModalVisible(false)} 
-      />
+      <Modal show={isModalVisible} title={modalTitle} message={modalMessage} onClose={() => setIsModalVisible(false)} />
     </div>
   );
 };
 
-const AdminPanel = ({ unapprovedListings, setActivePage, setSelectedProperty, db }) => {
-  const handleApproval = async (listing, status) => {
+const AdminPanel = ({ allProperties, db }) => {
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalTitle, setModalTitle] = useState('');
+
+  const handleApprove = async (listingId) => {
     try {
-      // Find the public listing to update
-      const q = query(collection(db, `artifacts/${appId}/public/data/listings`), where("id", "==", listing.id));
+      // Find the public document to update it
+      const publicListingsRef = collection(db, `artifacts/${appId}/public/data/listings`);
+      const q = query(publicListingsRef, where("id", "==", listingId));
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
-        const publicDoc = querySnapshot.docs[0];
-        await updateDoc(doc(db, publicDoc.ref.path), { isApproved: status === 'approve' });
+        querySnapshot.forEach(async (d) => {
+          await updateDoc(doc(db, `artifacts/${appId}/public/data/listings`, d.id), {
+            isApproved: true
+          });
+        });
       }
-
-      // Also update the user's private listing
-      const userDocRef = doc(db, `artifacts/${appId}/users/${listing.userId}/listings`, listing.id);
-      await updateDoc(userDocRef, { isApproved: status === 'approve' });
-
-      alert(`Listing ${listing.title} has been ${status === 'approve' ? 'approved' : 'rejected'}.`);
+      setModalTitle("Success!");
+      setModalMessage("Listing approved successfully.");
+      setIsModalVisible(true);
     } catch (e) {
-      console.error("Error updating document: ", e);
-      alert("Error updating listing. Please try again.");
+      setModalTitle("Error!");
+      setModalMessage("Failed to approve listing. Please try again.");
+      setIsModalVisible(true);
+      console.error("Error approving document: ", e);
     }
   };
 
+  const handleDelete = async (listingId) => {
+    try {
+      // Find and delete the public document
+      const publicListingsRef = collection(db, `artifacts/${appId}/public/data/listings`);
+      const q = query(publicListingsRef, where("id", "==", listingId));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        querySnapshot.forEach(async (d) => {
+          await deleteDoc(doc(db, `artifacts/${appId}/public/data/listings`, d.id));
+        });
+      }
+      setModalTitle("Success!");
+      setModalMessage("Listing deleted successfully.");
+      setIsModalVisible(true);
+    } catch (e) {
+      setModalTitle("Error!");
+      setModalMessage("Failed to delete listing. Please try again.");
+      setIsModalVisible(true);
+      console.error("Error deleting document: ", e);
+    }
+  };
+  
+  const pendingListings = allProperties.filter(p => !p.isApproved);
+
   return (
-    <div className="bg-gray-100 min-h-screen font-sans py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-100 p-4 font-sans">
+      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-8">Admin Panel</h1>
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">Unapproved Listings</h2>
-        {unapprovedListings.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {unapprovedListings.map(p => (
-              <div key={p.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <ListingCard property={p} onClick={() => { setActivePage('details'); setSelectedProperty(p); }} />
-                <div className="p-4 flex justify-between space-x-2">
-                  <button onClick={() => handleApproval(p, 'approve')} className="flex-1 bg-green-600 text-white font-bold py-2 px-4 rounded-full hover:bg-green-700 transition-colors duration-300">
-                    Approve
-                  </button>
-                  <button onClick={() => handleApproval(p, 'reject')} className="flex-1 bg-red-600 text-white font-bold py-2 px-4 rounded-full hover:bg-red-700 transition-colors duration-300">
-                    Reject
-                  </button>
+        <p className="text-gray-600 mb-8">Review and manage all property listings submitted by users.</p>
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Pending Listings ({pendingListings.length})</h2>
+          {pendingListings.length === 0 ? (
+            <p className="text-gray-600">No pending listings to review.</p>
+          ) : (
+            <div className="space-y-6">
+              {pendingListings.map(p => (
+                <div key={p.id} className="bg-gray-50 rounded-lg p-4 flex items-center justify-between shadow-sm">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">{p.title}</h3>
+                    <p className="text-sm text-gray-500">{p.location}</p>
+                    <p className="text-xs text-gray-400">Posted by User ID: <span className="font-mono">{p.userId}</span></p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleApprove(p.id)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full">Approve</button>
+                    <button onClick={() => handleDelete(p.id)} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full">Delete</button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-600">No new listings to approve.</p>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      <Modal show={isModalVisible} title={modalTitle} message={modalMessage} onClose={() => setIsModalVisible(false)} />
     </div>
   );
 };
 
+const AboutUsPage = () => (
+  <div className="bg-gray-100 min-h-screen font-sans">
+    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+      <div className="bg-white rounded-xl shadow-lg p-8">
+        <h1 className="text-4xl font-bold text-gray-800 mb-6 text-center">About Property Bazar</h1>
+        <p className="text-gray-700 leading-relaxed mb-6">
+          Property Bazar is India's premier online platform dedicated to helping you buy, sell, and rent properties with ease. Our mission is to simplify the real estate process by providing a transparent, efficient, and user-friendly platform that connects buyers, sellers, and brokers.
+        </p>
+        <p className="text-gray-700 leading-relaxed mb-6">
+          Whether you're looking for your dream home, a commercial space for your business, or agricultural land for investment, Property Bazar offers a wide range of verified listings to suit your needs. We believe in providing accurate information and a seamless experience, ensuring you can make informed decisions.
+        </p>
+        <p className="text-gray-700 leading-relaxed mb-6">
+          Our team is committed to innovation and customer satisfaction. We continuously work to enhance our platform with new features and tools to make your property journey as smooth as possible. Thank you for choosing Property Bazar.
+        </p>
+        <div className="text-center mt-8">
+          <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg">
+            Contact Our Team
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
-// --- Main App Component ---
+// --- Main Application Component ---
 const App = () => {
   const [activePage, setActivePage] = useState('home');
-  const [user, setUser] = useState(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [allProperties, setAllProperties] = useState([]);
-  const [userListings, setUserListings] = useState([]);
-  const [unapprovedListings, setUnapprovedListings] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [db, setDb] = useState(null);
+  const [auth, setAuth] = useState(null);
+  const [user, setUser] = useState(null);
+  const [allProperties, setAllProperties] = useState([]);
+  const [myListings, setMyListings] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Initialize Firebase and listen for auth state changes
+  // Initialize Firebase and set up auth listener
   useEffect(() => {
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // Persist a stable reference to db and auth
-    let dbInstance = db;
-    let authInstance = auth;
-    
-    // Auth state listener
-    const unsubscribeAuth = onAuthStateChanged(authInstance, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        setUser(null);
-      }
-      setIsAuthReady(true);
-    });
-
-    // Handle initial authentication
-    const setupAuth = async () => {
+    const initializeFirebase = async () => {
       try {
+        const app = initializeApp(firebaseConfig);
+        const firestore = getFirestore(app);
+        const firebaseAuth = getAuth(app);
+        setDb(firestore);
+        setAuth(firebaseAuth);
+
+        // Sign in with custom token or anonymously
         if (initialAuthToken) {
-          await signInWithCustomToken(authInstance, initialAuthToken);
+          await signInWithCustomToken(firebaseAuth, initialAuthToken);
         } else {
-          await signInAnonymously(authInstance);
+          await signInAnonymously(firebaseAuth);
         }
-      } catch (error) {
-        console.error("Firebase auth error:", error);
+      } catch (e) {
+        console.error("Error initializing Firebase:", e);
       }
     };
-    setupAuth();
-
-    return () => unsubscribeAuth(); // Cleanup auth listener
+    initializeFirebase();
   }, []);
 
-  // Fetch data with Firestore listeners after auth is ready
+  // Set up auth state change listener and fetch data
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!auth || !db) return;
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const userId = auth.currentUser?.uid || 'anonymous';
-    const ADMIN_UID = 'ADMIN_USER_ID'; // Replace with the actual UID of your admin user
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const uid = currentUser.uid;
+        // Check for admin status. In a real app, this would be more secure.
+        if (uid === "admin-user-id-placeholder") {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
 
-    // Listen to all public listings
-    const unsubscribePublic = onSnapshot(collection(db, `artifacts/${appId}/public/data/listings`), (snapshot) => {
-      const listings = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setAllProperties(listings);
+        // Fetch user's private listings
+        const myListingsRef = collection(db, `artifacts/${appId}/users/${uid}/listings`);
+        const unsubscribeMyListings = onSnapshot(myListingsRef, (snapshot) => {
+          const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setMyListings(listingsData);
+        }, (error) => {
+          console.error("Error fetching user listings:", error);
+        });
+        return () => unsubscribeMyListings();
+      } else {
+        setMyListings([]);
+        setIsAdmin(false);
+      }
+    });
+
+    // Fetch all public listings for the main page
+    const publicListingsRef = collection(db, `artifacts/${appId}/public/data/listings`);
+    const unsubscribeAllListings = onSnapshot(publicListingsRef, (snapshot) => {
+      const listingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllProperties(listingsData);
     }, (error) => {
       console.error("Error fetching public listings:", error);
     });
 
-    // Listen to the current user's private listings
-    const unsubscribeUser = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/listings`), (snapshot) => {
-      const listings = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setUserListings(listings);
-    }, (error) => {
-      console.error("Error fetching user listings:", error);
-    });
-
-    // Listen to unapproved listings for the admin panel
-    const unapprovedQuery = query(collection(db, `artifacts/${appId}/public/data/listings`), where("isApproved", "==", false));
-    const unsubscribeAdmin = onSnapshot(unapprovedQuery, (snapshot) => {
-      const listings = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setUnapprovedListings(listings);
-    }, (error) => {
-      console.error("Error fetching unapproved listings:", error);
-    });
-
     return () => {
-      unsubscribePublic();
-      unsubscribeUser();
-      unsubscribeAdmin();
+      unsubscribeAuth();
+      unsubscribeAllListings();
     };
-  }, [isAuthReady]);
-  
-  const isAdmin = user && user.email === 'admin@propertybazar.com'; // Simple check for demo
+  }, [auth, db, appId]);
 
-  // Helper function to render pages based on activePage state
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setActivePage('home');
+      setMyListings([]);
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+  };
+
   const renderPage = () => {
     switch (activePage) {
       case 'home':
@@ -917,82 +1023,76 @@ const App = () => {
       case 'listings':
         return <ListingsPage allProperties={allProperties} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} categories={CATEGORIES} />;
       case 'details':
-        return <PropertyDetails property={selectedProperty} onBack={() => setActivePage('listings')} />;
-      case 'about':
-        return <div className="max-w-4xl mx-auto"><div className="py-12 bg-white shadow-lg rounded-lg px-8"><h2 className="text-3xl font-bold text-gray-800 mb-4">About Us</h2><p className="text-gray-600 leading-relaxed">Property Bazar is a leading platform connecting buyers, sellers, and renters. We strive to provide a seamless and transparent experience for all your real estate needs. Our mission is to make finding your perfect property as easy as possible.</p></div></div>;
+        return selectedProperty ? <PropertyDetails property={selectedProperty} onBack={() => setActivePage('listings')} /> : null;
       case 'post':
-        if (!user) return <LoginPage setActivePage={setActivePage} auth={getAuth()} />;
-        return <PostPropertyForm setActivePage={setActivePage} db={getFirestore()} userId={user.uid} categories={CATEGORIES} />;
-      case 'login':
-        return <LoginPage setActivePage={setActivePage} auth={getAuth()} />;
-      case 'signup':
-        return <SignUpPage setActivePage={setActivePage} auth={getAuth()} />;
+        return <PostPropertyForm setActivePage={setActivePage} db={db} userId={user?.uid} />;
       case 'dashboard':
-        if (!user) return <LoginPage setActivePage={setActivePage} auth={getAuth()} />;
-        return <DashboardPage user={user} userListings={userListings} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} db={getFirestore()} />;
+        return user ? <DashboardPage user={user} myListings={myListings} db={db} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} /> : <LoginPage setActivePage={setActivePage} auth={auth} />;
       case 'admin':
-        if (!user || !isAdmin) return <div className="text-center p-10">Access Denied</div>;
-        return <AdminPanel unapprovedListings={unapprovedListings} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} db={getFirestore()} />;
+        return isAdmin ? <AdminPanel allProperties={allProperties} db={db} /> : <div className="text-center p-8">Access Denied.</div>;
+      case 'login':
+        return <LoginPage setActivePage={setActivePage} auth={auth} />;
+      case 'signup':
+        return <SignUpPage setActivePage={setActivePage} auth={auth} />;
+      case 'about':
+        return <AboutUsPage />;
       default:
         return <HomePage allProperties={allProperties} setActivePage={setActivePage} setSelectedProperty={setSelectedProperty} />;
     }
   };
 
-  const handleLogout = async () => {
-    const auth = getAuth();
-    try {
-      await signOut(auth);
-      setUser(null);
-      setActivePage('home');
-    } catch (e) {
-      console.error("Logout error:", e);
-    }
-  };
+  if (!auth || !db) {
+    return <div className="flex justify-center items-center min-h-screen bg-gray-100"><p className="text-gray-600">Loading...</p></div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col antialiased">
+    <div className="bg-gray-50 min-h-screen">
       {/* Header/Navbar */}
-      <header className="w-full bg-white shadow-md rounded-b-lg sticky top-0 z-50">
-        <nav className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-          <button onClick={() => setActivePage('home')} className="text-2xl font-bold text-blue-600 flex items-center space-x-2">
-            <HouseIcon />
-            <span>Property Bazar</span>
-          </button>
-          <div className="flex flex-wrap justify-center space-x-2 sm:space-x-4">
-            <button onClick={() => setActivePage('home')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-300 p-2 rounded-md">Home</button>
-            <button onClick={() => setActivePage('listings')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-300 p-2 rounded-md">Listings</button>
-            <button onClick={() => setActivePage('about')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-300 p-2 rounded-md">About Us</button>
-            <button onClick={() => setActivePage('post')} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-full hover:bg-blue-700 transition-colors duration-300">
-              Post Property
-            </button>
-            {isAdmin && (
-              <button onClick={() => setActivePage('admin')} className="bg-gray-800 text-white py-2 px-4 rounded-full hover:bg-gray-900 transition-colors duration-300 flex items-center space-x-2">
-                <AdminIcon />
-                <span>Admin Panel</span>
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <HouseIcon />
+              <button onClick={() => setActivePage('home')} className="text-2xl font-extrabold text-blue-600 ml-2">
+                Property Bazar
               </button>
-            )}
-            <button onClick={() => user ? setActivePage('dashboard') : setActivePage('login')} className="bg-gray-800 text-white py-2 px-4 rounded-full hover:bg-gray-900 transition-colors duration-300 flex items-center space-x-2">
-              <UserIcon />
-              <span>{user ? 'Dashboard' : 'Login'}</span>
-            </button>
-            {user && (
-              <button onClick={handleLogout} className="bg-red-600 text-white py-2 px-4 rounded-full hover:bg-red-700 transition-colors duration-300">
-                Logout
+            </div>
+            <nav className="flex items-center space-x-4">
+              <button onClick={() => setActivePage('home')} className="text-gray-600 hover:text-blue-600 transition-colors duration-300">Home</button>
+              <button onClick={() => setActivePage('listings')} className="text-gray-600 hover:text-blue-600 transition-colors duration-300">Listings</button>
+              <button onClick={() => setActivePage('about')} className="text-gray-600 hover:text-blue-600 transition-colors duration-300">About Us</button>
+              <button onClick={() => setActivePage('post')} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-full hover:bg-blue-700 transition-colors duration-300">
+                Post Property
               </button>
-            )}
+              {isAdmin && (
+                <button onClick={() => setActivePage('admin')} className="bg-gray-800 text-white py-2 px-4 rounded-full hover:bg-gray-900 transition-colors duration-300 flex items-center space-x-2">
+                  <AdminIcon />
+                  <span>Admin Panel</span>
+                </button>
+              )}
+              {user ? (
+                <button onClick={handleLogout} className="bg-red-600 text-white py-2 px-4 rounded-full hover:bg-red-700 transition-colors duration-300">
+                  Logout
+                </button>
+              ) : (
+                <button onClick={() => setActivePage('login')} className="bg-gray-800 text-white py-2 px-4 rounded-full hover:bg-gray-900 transition-colors duration-300 flex items-center space-x-2">
+                  <UserIcon />
+                  <span>Login</span>
+                </button>
+              )}
+            </nav>
           </div>
-        </nav>
+        </div>
       </header>
 
-      {/* Main content area */}
-      <main className="container mx-auto px-4 py-8 flex-grow">
-        {isAuthReady ? renderPage() : <div className="text-center p-20">Loading...</div>}
+      <main className="min-h-screen">
+        {renderPage()}
       </main>
-      
+
       {/* Footer */}
-      <footer className="w-full bg-white shadow-inner rounded-t-lg mt-8">
-        <div className="container mx-auto px-4 py-6 text-center text-gray-500 text-sm">
-          &copy; {new Date().getFullYear()} Property Bazar. All rights reserved.
+      <footer className="bg-gray-800 text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-sm text-gray-400">© 2024 Property Bazar. All rights reserved.</p>
         </div>
       </footer>
     </div>
